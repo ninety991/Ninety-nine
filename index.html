@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ninety9 Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:Poppins;background:#000 url("2d.png") center/cover no-repeat;color:white;text-align:center;}
+/* LOADING */
+#loader{position:fixed;width:100%;height:100%;background:black;display:flex;justify-content:center;align-items:center;z-index:9999;}
+#loader img{width:140px;animation:spin 3s linear infinite;}
+.instagram{font-size:36px;font-weight:800;margin-top:20px;display:flex;justify-content:center;align-items:center;gap:10px;}
+.instagram img{width:34px;}
+.logo img{width:110px;animation:spin 6s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.clock{font-size:24px;margin:10px 0 30px;}
+.products{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:90%;margin:auto;}
+.card{background:#111;border-radius:20px;padding:15px;position:relative;}
+.card img{width:100%;border-radius:15px;}
+button{background:silver;border:none;padding:10px;border-radius:10px;cursor:pointer;margin-top:10px;font-weight:600;}
+.cart{width:90%;margin:40px auto;background:#111;padding:20px;border-radius:20px;}
+.modal{display:none;position:fixed;width:100%;height:100%;background:rgba(0,0,0,0.9);top:0;left:0;justify-content:center;align-items:center;}
+.modal-box{background:#111;padding:25px;border-radius:20px;width:330px;text-align:left;position:relative;}
+.size-btn,.color-btn{padding:8px 12px;margin:5px;border:none;border-radius:8px;cursor:pointer;}
+.size-btn{background:#333;color:white;}
+.color-btn.black{background:black;}
+.color-btn.white{background:white;color:black;}
+.thanks{background:black;border:1px solid silver;padding:20px;border-radius:15px;margin-top:20px;text-align:center;}
+.thanks img{width:70px;margin-bottom:10px;}
+.close-btn{position:absolute;top:10px;right:10px;background:red;color:white;font-weight:bold;border-radius:50%;width:25px;height:25px;display:flex;justify-content:center;align-items:center;cursor:pointer;}
+.quantity{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:5px;}
+.quantity button{padding:5px 10px;}
+.promo-active{color:#0f0;font-size:12px;margin-top:5px;}
+</style>
+</head>
+<body>
+<!-- LOADING SCREEN -->
+<div id="loader">
+<img src="3d.png">
+</div>
+
+<div class="instagram">
+<img src="ig.png"> Ninety9.egy
+</div>
+
+<div class="logo">
+<img src="3d.png">
+</div>
+
+<div class="clock" id="clock"></div>
+
+<div class="products" id="products"></div>
+
+<div class="cart">
+<h3>Cart</h3>
+<div id="cartItems"></div>
+<p>Total: <span id="total">0</span> EGP</p>
+
+<input placeholder="Promo Code" id="promoCodeInput">
+<button id="applyPromo">Apply</button>
+<p id="promoMsg" class="promo-active"></p>
+
+<button id="checkoutBtn">Checkout</button>
+</div>
+
+<!-- اختيار المنتج -->
+<div class="modal" id="productModal">
+<div class="modal-box">
+<div class="close-btn" onclick="productModal.style.display='none'">X</div>
+<h3 id="productName"></h3>
+<p>Size</p>
+<button class="size-btn">S</button>
+<button class="size-btn">M</button>
+<button class="size-btn">L</button>
+<button id="addToCart">Add To Cart</button>
+</div>
+</div>
+
+<!-- CHECKOUT -->
+<div class="modal" id="checkoutModal">
+<div class="modal-box">
+<div class="close-btn" onclick="checkoutModal.style.display='none'">X</div>
+<form id="checkoutForm">
+<input placeholder="Full Name" id="name" required><br><br>
+<input placeholder="Phone Number" id="phone" required><br><br>
+<select id="gov" required>
+<option value="">Governorate</option>
+<option value="Giza">Giza</option>
+<option value="Cairo">Cairo</option>
+</select><br><br>
+<select id="area" required>
+<option value="">Area</option>
+</select><br><br>
+<textarea placeholder="Full Address" id="address" required></textarea><br><br>
+<input placeholder="Building / Villa Number" id="building" required><br><br>
+<input placeholder="Apartment Number" id="apartment" required><br><br>
+<input value="E-Wallet Only" readonly><br><br>
+<p style="display:flex;align-items:center;gap:10px;">
+<img src="e.png" width="22">
+01144108775
+</p><br>
+<input type="file" required><br><br>
+<p id="shipping"></p>
+<button>Confirm Order</button>
+</form>
+<div id="thanksBox"></div>
+</div>
+</div>
+
+<script>
+/* LOADER */
+window.addEventListener("load",()=>{
+setTimeout(()=>{document.getElementById("loader").style.display="none";},1200);
+});
+
+/* الساعة */
+setInterval(()=>{clock.innerText=new Date().toLocaleTimeString();},1000);
+
+/* المنتجات */
+const products=[
+{name:"99 T-shirt",price:650,img:"T.png",sizes:["S","M","L"],colors:[]},
+{name:"Sweet Pants 99",price:750,img:"Sweet.png",sizes:[],colors:["Black"]},
+{name:"99 chain",price:750,img:"C.jpg",sizes:[],colors:[]},
+{name:"white 99 t-shirt",price:650,img:"W.jpg",sizes:["S","M","L"],colors:[]},
+{name:"99 black flag",price:500,img:"F.jpg",sizes:[],colors:[]}
+];
+
+let cart=[]; let currentProduct=null; let selectedSize=""; let selectedColor="Black"; let promoApplied=false;
+
+const productsContainer=document.getElementById("products");
+
+function renderProducts(){
+productsContainer.innerHTML="";
+products.forEach(p=>{
+const div=document.createElement("div"); div.className="card";
+let sizeButtons="";
+if(p.sizes.length>0){sizeButtons=p.sizes.map(s=>`<button class="size-btn" onclick="selectSize('${s}')">${s}</button>`).join("");}
+let addBtn= p.name==="99 chain"? `<button onclick="addToCartDirect('${p.name}',${p.price})">Add To Cart</button>`:`<button onclick="openProduct('${p.name}',${p.price})">Select</button>`;
+div.innerHTML=`<img src="${p.img}"><h3>${p.name}</h3>${sizeButtons}<br>${addBtn}`;
+productsContainer.appendChild(div);
+});
+}
+renderProducts();
+
+function selectSize(s){selectedSize=s;}
+function openProduct(name,price){currentProduct={name,price};productName.innerText=name;productModal.style.display="flex";selectedSize="S";selectedColor="Black";}
+function addToCartDirect(name,price){cart.push({name,price,size:"",color:"Black",quantity:1});renderCart();}
+
+document.querySelectorAll(".size-btn").forEach(b=>{b.onclick=()=>selectedSize=b.innerText;});
+
+addToCart.onclick=()=>{
+if(!selectedSize) return alert("Select size");
+cart.push({...currentProduct,size:selectedSize,color:selectedColor,quantity:1});renderCart();productModal.style.display="none";};
+
+function renderCart(){
+cartItems.innerHTML=""; let total=0;
+cart.forEach((i,index)=>{
+total+=i.price*i.quantity;
+cartItems.innerHTML+=`<p>${i.name} - ${i.size} - ${i.color} <span class="quantity"><button onclick="decreaseQty(${index})">-</button>${i.quantity}<button onclick="increaseQty(${index})">+</button></span></p>`;
+});
+document.getElementById("total").innerText=total;
+if(promoApplied) updatePromo();
+}
+
+function increaseQty(i){cart[i].quantity++;renderCart();}
+function decreaseQty(i){if(cart[i].quantity>1){cart[i].quantity--;}else{cart.splice(i,1);}renderCart();}
+
+/* فتح التشيك اوت */
+checkoutBtn.onclick=()=>{checkoutModal.style.display="flex";};
+
+/* المناطق */
+const areas={Giza:["6th of October","El Shikh Zayed","El Zamalek","El Agouza","El Dokki","Embaba","Bolaq El Dakrour","Bolaq Abu El Ella"],Cairo:["Tgamoo","Nasr City","Maadi"]};
+gov.onchange=()=>{area.innerHTML='<option value="">Area</option>';areas[gov.value].forEach(a=>{let opt=document.createElement("option");opt.textContent=a;area.appendChild(opt);});};
+
+/* سعر التوصيل */
+gov.addEventListener("change",()=>{let ship=gov.value==="Giza"?50:75;shipping.innerText="Shipping: "+ship+" EGP";});
+
+/* برومو كود */
+applyPromo.onclick=()=>{
+if(promoCodeInput.value==="N99"){promoApplied=true;promoCodeInput.style.borderColor="green";promoMsg.innerText="Promo code applied: 20% discount!";updatePromo();}else{promoApplied=false;promoCodeInput.style.borderColor="red";promoMsg.innerText="Invalid code";renderCart();}};
+
+function updatePromo(){let total=cart.reduce((s,i)=>s+i.price*i.quantity,0);let totalBefore=total;total=total*0.8;document.getElementById("total").innerText=total.toFixed(2);promoMsg.innerText=`Promo applied: 20% off. Total before: ${totalBefore} EGP, after: ${total.toFixed(2)} EGP`;}
+
+/* ارسال واتساب */
+checkoutForm.onsubmit=(e)=>{
+e.preventDefault();
+let ship=gov.value==="Giza"?50:75;
+let totalBefore=cart.reduce((s,i)=>s+i.price*i.quantity,0)+ship;
+let totalAfter=promoApplied?totalBefore*0.8:totalBefore;
+let msg=`New Order - Ninety9 Store
+
+Customer Info
+Name: ${name.value}
+Phone: ${phone.value}
+
+Location
+Governorate: ${gov.value}
+Area: ${area.value}
+Address: ${address.value}
+Building: ${building.value}
+Apartment: ${apartment.value}
+
+Order Details
+`;
+
+cart.forEach(p=>{
+msg+=`${p.name} | Size: ${p.size} | Color: ${p.color} | ${p.price} EGP | Qty: ${p.quantity}\n`;
+});
+
+if(promoApplied){msg+=`\nPromo code used: N99\nTotal before discount: ${totalBefore} EGP\nTotal after discount: ${totalAfter.toFixed(2)} EGP`;}else{msg+=`\nTotal: ${totalAfter.toFixed(2)} EGP`;}
+
+const number="201144108775"; // الرقم النهائي للتحويل والواتساب
+window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`);
+
+thanksBox.innerHTML=`<div class="thanks"><img src="3d.png"><p>Thank you for your trust in 99</p></div>`;
+cart=[]; promoApplied=false; renderCart();};
+</script>
+</body>
+</html>
